@@ -26,6 +26,8 @@ const version = integer().notNull().default(1)
 
 export const tripRole = pgEnum('trip_role', ['owner', 'editor'])
 export const splitType = pgEnum('split_type', ['equal', 'exact', 'shares'])
+// 行程項目分類，決定卡片的顏色與圖示（見 shared/utils/itinerary.ts）
+export const itemCategory = pgEnum('item_category', ['spot', 'food', 'transport', 'stay', 'shopping', 'other'])
 
 // ── 使用者與身分 ─────────────────────────────────────────
 
@@ -91,6 +93,7 @@ export const itineraryItems = pgTable('itinerary_items', {
   // 冗餘欄位，方便權限檢查與依旅程查詢變更
   tripId: uuid().notNull().references(() => trips.id, { onDelete: 'cascade' }),
   title: text().notNull(),
+  category: itemCategory().notNull().default('spot'),
   startTime: time(),
   endTime: time(),
   location: text(),

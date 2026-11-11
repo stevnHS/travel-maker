@@ -1,29 +1,21 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from '@nuxt/ui'
 
-definePageMeta({ middleware: 'auth' })
-
 const route = useRoute()
-const tripId = route.params.id as string
+const router = useRouter()
 const { user } = useUserSession()
 const toast = useToast()
 const confirm = useConfirm()
+const { tripId, trip, members, isOwner, refresh } = useTrip()
+const requestOrigin = useRequestURL().origin
 
 // 這些操作不需回傳值；明確指定 $fetch<unknown> 可避免 typed 路由比對造成型別遞迴過深
 const api = (path = ''): string => `/api/trips/${tripId}${path}`
 
-const { data, error, refresh } = await useFetch(`/api/trips/${tripId}`)
-
-const trip = computed(() => data.value?.trip)
-const members = computed(() => data.value?.members ?? [])
-const isOwner = computed(() => data.value?.myRole === 'owner')
-
-useSeoMeta({ title: () => trip.value?.name ?? '旅程' })
-
 // ── 邀請連結 ─────────────────────────────────────────────
 
 const inviteUrl = computed(() =>
-  trip.value ? `${useRequestURL().origin}/join/${trip.value.inviteToken}` : '',
+  trip.value ? `${requestOrigin}/join/${trip.value.inviteToken}` : '',
 )
 const lineShareUrl = computed(() =>
   `https://line.me/R/msg/text/?${encodeURIComponent(`一起規劃「${trip.value?.name}」吧！\n${inviteUrl.value}`)}`,
@@ -41,7 +33,11 @@ async function copyInvite() {
 
 // ── 操作 ─────────────────────────────────────────────────
 
-const editOpen = ref(false)
+// 其他分頁可用 ?edit=1 導過來直接開啟編輯（例如行程頁提示先設定日期）
+const editOpen = ref(route.query.edit === '1')
+watch(editOpen, (open) => {
+  if (!open && route.query.edit) router.replace({ query: {} })
+})
 
 /** 執行 API 呼叫，失敗時顯示錯誤；成功回傳 true */
 async function run(action: () => Promise<unknown>, successTitle?: string) {
@@ -127,92 +123,79 @@ function memberMenu(member: { id: string, displayName: string }): DropdownMenuIt
 </script>
 
 <template>
-  <div>
-    <AppHeader />
+  <div class="space-y-5">
+    <template v-if="trip">
+      <TripHero
+        :name="trip.name"
+        :start-date="trip.startDate"
+        :end-date="trip.endDate"
+        :member-count="members.length"
+      >
+        <template #actions>
+          <div class="flex gap-1">
+            <UButton icon="i-lucide-pencil" color="neutral" variant="ghost" size="sm" aria-label="編輯旅程" @click="editOpen = true" />
+            <UDropdownMenu v-if="isOwner" :items="ownerMenu" :content="{ align: 'end' }">
+              <UButton icon="i-lucide-ellipsis" color="neutral" variant="ghost" size="sm" aria-label="更多操作" />
+            </UDropdownMenu>
+          </div>
+        </template>
+      </TripHero>
 
-    <main class="mx-auto max-w-xl space-y-5 p-4 pb-10">
-      <UCard v-if="error" class="text-center">
-        <p class="mb-4">
-          {{ getErrorMessage(error, '無法載入旅程') }}
-        </p>
-        <UButton to="/" color="neutral" variant="outline">
-          回首頁
-        </UButton>
+      <p v-if="trip.description" class="px-1 whitespace-pre-line">
+        {{ trip.description }}
+      </p>
+
+      <!-- 邀請 -->
+      <UCard>
+        <template #header>
+          <SectionHeading icon="i-lucide-send" title="邀請旅伴" tone="mizu" />
+        </template>
+        <div class="space-y-3">
+          <UInput :model-value="inviteUrl" readonly class="w-full" @focus="($event.target as HTMLInputElement).select()" />
+          <div class="grid grid-cols-2 gap-2">
+            <UButton icon="i-lucide-copy" color="neutral" variant="outline" block @click="copyInvite">
+              複製連結
+            </UButton>
+            <UButton
+              :to="lineShareUrl"
+              target="_blank"
+              external
+              block
+              class="bg-[#06C755] text-white hover:bg-[#05b34c] comic:text-white"
+            >
+              分享到 LINE
+            </UButton>
+          </div>
+        </div>
       </UCard>
 
-      <template v-else-if="trip">
-        <TripHero
-          :name="trip.name"
-          :start-date="trip.startDate"
-          :end-date="trip.endDate"
-          :member-count="members.length"
-        >
-          <template #actions>
-            <div class="flex gap-1">
-              <UButton icon="i-lucide-pencil" color="neutral" variant="ghost" size="sm" aria-label="編輯旅程" @click="editOpen = true" />
-              <UDropdownMenu v-if="isOwner" :items="ownerMenu" :content="{ align: 'end' }">
-                <UButton icon="i-lucide-ellipsis" color="neutral" variant="ghost" size="sm" aria-label="更多操作" />
-              </UDropdownMenu>
-            </div>
-          </template>
-        </TripHero>
-
-        <p v-if="trip.description" class="px-1 whitespace-pre-line">
-          {{ trip.description }}
-        </p>
-
-        <!-- 邀請 -->
-        <UCard>
-          <template #header>
-            <SectionHeading icon="i-lucide-send" title="邀請旅伴" tone="mizu" />
-          </template>
-          <div class="space-y-3">
-            <UInput :model-value="inviteUrl" readonly class="w-full" @focus="($event.target as HTMLInputElement).select()" />
-            <div class="grid grid-cols-2 gap-2">
-              <UButton icon="i-lucide-copy" color="neutral" variant="outline" block @click="copyInvite">
-                複製連結
-              </UButton>
-              <UButton
-                :to="lineShareUrl"
-                target="_blank"
-                external
-                block
-                class="bg-[#06C755] text-white hover:bg-[#05b34c] comic:text-white"
-              >
-                分享到 LINE
-              </UButton>
-            </div>
-          </div>
-        </UCard>
-
-        <!-- 成員 -->
-        <UCard>
-          <template #header>
-            <SectionHeading icon="i-lucide-users" :title="`旅伴（${members.length}）`" tone="coral" />
-          </template>
-          <ul class="divide-y divide-(--ui-border-muted)">
-            <li v-for="member in members" :key="member.id" class="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
-              <UAvatar :src="member.avatarUrl ?? undefined" :alt="member.displayName" />
-              <span class="min-w-0 flex-1 truncate">
-                {{ member.displayName }}
-                <span v-if="member.id === user?.id" class="text-sm text-muted">（你）</span>
-              </span>
-              <UBadge v-if="member.role === 'owner'" variant="soft" size="sm" icon="i-lucide-crown">
-                擁有者
-              </UBadge>
-              <UDropdownMenu v-if="isOwner && member.id !== user?.id" :items="memberMenu(member)" :content="{ align: 'end' }">
-                <UButton icon="i-lucide-ellipsis-vertical" color="neutral" variant="ghost" size="sm" aria-label="成員操作" />
-              </UDropdownMenu>
-            </li>
-          </ul>
-          <template v-if="!isOwner" #footer>
-            <UButton color="error" variant="ghost" icon="i-lucide-log-out" @click="leaveTrip">
-              退出旅程
-            </UButton>
-          </template>
-        </UCard>
-      </template>
-    </main>
+      <!-- 成員 -->
+      <UCard>
+        <template #header>
+          <SectionHeading icon="i-lucide-users" :title="`旅伴（${members.length}）`" tone="coral" />
+        </template>
+        <ul class="divide-y divide-(--ui-border-muted)">
+          <li v-for="member in members" :key="member.id" class="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
+            <UAvatar :src="member.avatarUrl ?? undefined" :alt="member.displayName" />
+            <span class="min-w-0 flex-1 truncate">
+              {{ member.displayName }}
+              <span v-if="member.id === user?.id" class="text-sm text-muted">（你）</span>
+            </span>
+            <UBadge v-if="member.role === 'owner'" variant="soft" size="sm" icon="i-lucide-crown">
+              擁有者
+            </UBadge>
+            <UDropdownMenu v-if="isOwner && member.id !== user?.id" :items="memberMenu(member)" :content="{ align: 'end' }">
+              <UButton icon="i-lucide-ellipsis-vertical" color="neutral" variant="ghost" size="sm" aria-label="成員操作" />
+            </UDropdownMenu>
+          </li>
+        </ul>
+        <template v-if="!isOwner" #footer>
+          <UButton color="error" variant="ghost" icon="i-lucide-log-out" @click="leaveTrip">
+            退出旅程
+          </UButton>
+        </template>
+      </UCard>
+    </template>
 
     <TripFormModal
       v-if="trip"

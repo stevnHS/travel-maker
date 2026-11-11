@@ -74,11 +74,12 @@
   --tm-wakatake: #b9daa5; /* 若竹綠 */
   --tm-accent-soft: #fdf1d3;
 
-  /* 粉彩底色搭配墨色文字；文字用途的 error 另取較深的珊瑚色才讀得清楚 */
+  /* 粉彩底色搭配墨色文字；success / info / error 也會當文字色，另取較深的色調才讀得清楚。
+     需要粉彩底色時直接用 --tm-wakatake、--tm-mizu 等變數 */
   --ui-primary: var(--tm-yamabuki);
   --ui-secondary: var(--tm-coral);
-  --ui-success: var(--tm-wakatake);
-  --ui-info: var(--tm-mizu);
+  --ui-success: #4f8f3a;
+  --ui-info: #3b86ab;
   --ui-warning: var(--tm-yamabuki);
   --ui-error: #d9634f;
 

@@ -61,7 +61,7 @@
 - 非成員存取旅程一律回 404，不透露旅程是否存在
 - 邀請預覽（`GET /api/invites/:token`）不需登入，只回傳名稱、日期、擁有者與人數；加入需登入，登入後透過 `auth_redirect` cookie 導回原頁
 - 已有記帳紀錄（付款人或分攤者）的成員不可移除或退出，避免結算資料失去對象
-- 旅程天數上限 60 天（日後依日期區間建立 `trip_days`）
+- 旅程天數上限 60 天（依日期區間建立 `trip_days`，見「行程」）
 
 ### API
 
@@ -82,10 +82,41 @@
 
 開發環境另有 `/auth/dev?name=小明&redirect=/path` 假登入（provider = `dev`），用來在本機模擬多位成員；正式建置中只會回 404。
 
-### 待後續里程碑處理
+## 行程
 
-- 修改旅程日期時如何處理已存在的 `trip_days`（行程編輯里程碑一併設計）
-- 「有記帳紀錄不可移除成員」的檢查已實作，待記帳 API 完成後補測
+- 每一天（`trip_days`）由旅程日期區間自動產生；建立或修改旅程日期時同步：補上缺少的天、刪除區間外的空白天
+- 縮短日期時，若區間外的天還有行程項目，回 409 並列出日期，請使用者先移除或移到其他天
+- 每一天可加標題（例如「高雄・岡山」）；項目有分類（景點 / 美食 / 交通 / 住宿 / 購物 / 其他），決定卡片顏色與圖示
+- 排序：以「往前移 / 往後移」調整，`PUT .../order` 送出當天完整 id 清單；清單與伺服器不符（有人同時新增或刪除）回 409。排序不遞增 `version`，避免和內容編輯互相衝突
+- 項目換到其他天時排在該天最後
+- 填寫地點即可開啟 Google Maps 導航（以地點文字搜尋，不需 API key）
+
+## 同步實作
+
+- `useAutoRefresh`：前景時每 15 秒輪詢（旅程資訊 30 秒），視窗回到前景、網路恢復時立即抓取
+- 編輯表單開啟時記下當時的 `version`；同步到較新版本時顯示「已被其他成員更新」並提供「載入最新內容」，不覆蓋使用者正在輸入的內容；項目被刪除時顯示提示並停用儲存
+- 儲存時帶開啟時的 `version`，衝突回 409，表單保留並重新同步
+
+## 記帳實作
+
+- 換算邏輯（`computeSplits`、`computeSettlement`）放在 `shared/utils/expense.ts`，前端即時預覽與伺服器寫入共用同一份
+- 編輯支出需同時更新 `expenses` 與 `expense_splits`。neon-http 只支援非互動式 batch，因此 batch 第一句以 `SELECT ... FOR UPDATE` 鎖住該列並檢查版本，不符時以 `1 / 0` 讓整批回滾，再回 409
+- 結算結果隨支出列表一起回傳（`GET /api/trips/:id/expenses`），不另存資料表
+
+### 行程與記帳 API
+
+| Method | Path | 說明 |
+|---|---|---|
+| GET | `/api/trips/:id/itinerary` | 每一天與其行程項目 |
+| PATCH | `/api/trips/:id/days/:dayId` | 修改當天標題（帶 `version`） |
+| PUT | `/api/trips/:id/days/:dayId/order` | 調整當天項目順序 |
+| POST | `/api/trips/:id/items` | 新增行程項目 |
+| PATCH | `/api/trips/:id/items/:itemId` | 編輯 / 換天（帶 `version`） |
+| DELETE | `/api/trips/:id/items/:itemId` | 刪除行程項目 |
+| GET | `/api/trips/:id/expenses` | 支出列表、每人收支、轉帳建議、總額 |
+| POST | `/api/trips/:id/expenses` | 新增支出 |
+| PATCH | `/api/trips/:id/expenses/:expenseId` | 編輯支出（帶 `version`） |
+| DELETE | `/api/trips/:id/expenses/:expenseId` | 刪除支出 |
 
 ## 資料模型
 
@@ -102,10 +133,11 @@ trips ─< expenses ─< expense_splits >─ users
 
 - [x] 專案骨架、schema、LINE 登入
 - [x] 旅程 CRUD、邀請連結、成員管理
-- [ ] 行程編輯（天 / 項目、排序、樂觀鎖、同步機制）
-- [ ] 記帳（新增支出、三種分攤）
-- [ ] 結算（淨額、債務最簡化）
-- [ ] 部署到 Vercel
+- [x] 主題切換（奶油黃 / 漫畫手繪）
+- [x] 行程編輯（天 / 項目、排序、樂觀鎖、同步機制）
+- [x] 記帳（新增支出、三種分攤）
+- [x] 結算（淨額、債務最簡化）
+- [ ] 部署到 Vercel（建置設定與步驟已備妥，見 README；待建立 Vercel 專案、正式資料庫與 LINE channel 設定）
 
 ## 之後再決定
 

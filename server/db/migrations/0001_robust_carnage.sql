@@ -1,0 +1,2 @@
+CREATE TYPE "public"."item_category" AS ENUM('spot', 'food', 'transport', 'stay', 'shopping', 'other');--> statement-breakpoint
+ALTER TABLE "itinerary_items" ADD COLUMN "category" "item_category" DEFAULT 'spot' NOT NULL;
