@@ -19,5 +19,9 @@ export default defineNuxtConfig({
   runtimeConfig: {
     // 由 NUXT_DATABASE_URL 覆寫
     databaseUrl: '',
+    // 預設沒有 maxAge，cookie 會在瀏覽器關閉時消失（手機上很常發生），改為登入後 30 天有效
+    session: {
+      maxAge: 60 * 60 * 24 * 30,
+    },
   },
 })

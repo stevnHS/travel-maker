@@ -40,10 +40,10 @@ pnpm dev
 
 建置已驗證可用 Vercel preset（`NITRO_PRESET=vercel pnpm build`，Node 24 runtime），Vercel 會自動偵測 Nuxt，不需要 `vercel.json`。
 
-1. **正式資料庫**：在 Neon 建一個 `production` branch（或另開專案），取得連線字串，然後對它套用 migration：
+1. **正式資料庫**：Neon 專案的預設 branch（`production`）給正式站用，本機開發另開一個 `dev` branch，`.env` 填 dev 的連線字串。對 production 套用 migration：
 
    ```bash
-   NUXT_DATABASE_URL="<正式資料庫連線字串>" pnpm db:migrate
+   NUXT_DATABASE_URL="<production 連線字串>" pnpm db:migrate
    ```
 
 2. **建立 Vercel 專案**：在 Vercel 匯入 GitHub repo，Framework Preset 選 Nuxt（通常會自動帶出）。
@@ -56,14 +56,16 @@ pnpm dev
    | `NUXT_OAUTH_LINE_CLIENT_ID` | LINE Login Channel ID |
    | `NUXT_OAUTH_LINE_CLIENT_SECRET` | LINE Login Channel secret |
    | `NUXT_OAUTH_LINE_REDIRECT_URL` | `https://<你的網域>/auth/line` |
-   | `ENABLE_EXPERIMENTAL_COREPACK` | `1`（讓 Vercel 依 `packageManager` 使用 pnpm 11） |
+   | `ENABLE_EXPERIMENTAL_COREPACK` | 選填。設為 `1` 時 Vercel 會依 `packageManager` 使用相同版本的 pnpm；安裝套件階段出錯時再加 |
+
+   Function Region 建議選和 Neon 相同的區域（例如 Singapore），否則每次查詢都要跨洋。
 
 4. **LINE Developers Console**：
    - Callback URL 加上 `https://<你的網域>/auth/line`（可與 localhost 並存，一行一個）
    - Channel 狀態要改成 **Published**，否則只有 channel 管理員與測試者能登入
 5. **部署並檢查**：用 LINE 登入、建立旅程、用另一個帳號開邀請連結加入。
 
-之後 schema 有變更時，先對正式資料庫執行 `pnpm db:migrate` 再部署。開發用假登入 `/auth/dev` 在正式建置中一律回 404。
+之後 schema 有變更時：`pnpm db:generate` → 本機 `pnpm db:migrate`（套用到 dev）測試 → 對 production 執行 migration → push 部署。開發用假登入 `/auth/dev` 在正式建置中一律回 404。
 
 ## 常用指令
 

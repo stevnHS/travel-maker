@@ -58,6 +58,7 @@
 | 退出旅程 | 須先轉移擁有者 | ✓ |
 
 - 每趟旅程恰有一位 owner，`trips.owner_id` 與 `trip_members.role` 同步維護（轉移時以 batch 一併更新）
+- 登入狀態存在加密 cookie（nuxt-auth-utils），登入後 30 天有效（`runtimeConfig.session.maxAge`），到期需重新以 LINE 登入
 - 非成員存取旅程一律回 404，不透露旅程是否存在
 - 邀請預覽（`GET /api/invites/:token`）不需登入，只回傳名稱、日期、擁有者與人數；加入需登入，登入後透過 `auth_redirect` cookie 導回原頁
 - 已有記帳紀錄（付款人或分攤者）的成員不可移除或退出，避免結算資料失去對象
@@ -137,7 +138,7 @@ trips ─< expenses ─< expense_splits >─ users
 - [x] 行程編輯（天 / 項目、排序、樂觀鎖、同步機制）
 - [x] 記帳（新增支出、三種分攤）
 - [x] 結算（淨額、債務最簡化）
-- [ ] 部署到 Vercel（建置設定與步驟已備妥，見 README；待建立 Vercel 專案、正式資料庫與 LINE channel 設定）
+- [x] 部署到 Vercel
 
 ## 之後再決定
 
