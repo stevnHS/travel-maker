@@ -130,7 +130,7 @@ function memberMenu(member: { id: string, displayName: string }): DropdownMenuIt
   <div>
     <AppHeader />
 
-    <main class="mx-auto max-w-3xl space-y-6 p-4">
+    <main class="mx-auto max-w-xl space-y-5 p-4 pb-10">
       <UCard v-if="error" class="text-center">
         <p class="mb-4">
           {{ getErrorMessage(error, '無法載入旅程') }}
@@ -141,43 +141,44 @@ function memberMenu(member: { id: string, displayName: string }): DropdownMenuIt
       </UCard>
 
       <template v-else-if="trip">
-        <!-- 旅程資訊 -->
-        <section class="flex items-start justify-between gap-4">
-          <div class="min-w-0 space-y-1">
-            <h1 class="text-2xl font-bold break-words">
-              {{ trip.name }}
-            </h1>
-            <p class="flex items-center gap-1 text-sm text-muted">
-              <UIcon name="i-lucide-calendar" />{{ formatDateRange(trip.startDate, trip.endDate) }}
-            </p>
-            <p v-if="trip.description" class="pt-2 whitespace-pre-line">
-              {{ trip.description }}
-            </p>
-          </div>
-          <div class="flex shrink-0 gap-1">
-            <UButton icon="i-lucide-pencil" color="neutral" variant="outline" @click="editOpen = true">
-              編輯
-            </UButton>
-            <UDropdownMenu v-if="isOwner" :items="ownerMenu" :content="{ align: 'end' }">
-              <UButton icon="i-lucide-ellipsis" color="neutral" variant="outline" aria-label="更多操作" />
-            </UDropdownMenu>
-          </div>
-        </section>
+        <TripHero
+          :name="trip.name"
+          :start-date="trip.startDate"
+          :end-date="trip.endDate"
+          :member-count="members.length"
+        >
+          <template #actions>
+            <div class="flex gap-1">
+              <UButton icon="i-lucide-pencil" color="neutral" variant="ghost" size="sm" aria-label="編輯旅程" @click="editOpen = true" />
+              <UDropdownMenu v-if="isOwner" :items="ownerMenu" :content="{ align: 'end' }">
+                <UButton icon="i-lucide-ellipsis" color="neutral" variant="ghost" size="sm" aria-label="更多操作" />
+              </UDropdownMenu>
+            </div>
+          </template>
+        </TripHero>
+
+        <p v-if="trip.description" class="px-1 whitespace-pre-line">
+          {{ trip.description }}
+        </p>
 
         <!-- 邀請 -->
         <UCard>
           <template #header>
-            <h2 class="font-medium">
-              邀請旅伴
-            </h2>
+            <SectionHeading icon="i-lucide-send" title="邀請旅伴" tone="mizu" />
           </template>
-          <div class="flex flex-col gap-2 sm:flex-row">
-            <UInput :model-value="inviteUrl" readonly class="flex-1" @focus="($event.target as HTMLInputElement).select()" />
-            <div class="flex gap-2">
-              <UButton icon="i-lucide-copy" color="neutral" variant="outline" @click="copyInvite">
-                複製
+          <div class="space-y-3">
+            <UInput :model-value="inviteUrl" readonly class="w-full" @focus="($event.target as HTMLInputElement).select()" />
+            <div class="grid grid-cols-2 gap-2">
+              <UButton icon="i-lucide-copy" color="neutral" variant="outline" block @click="copyInvite">
+                複製連結
               </UButton>
-              <UButton :to="lineShareUrl" target="_blank" external class="bg-[#06C755] hover:bg-[#05b34c]">
+              <UButton
+                :to="lineShareUrl"
+                target="_blank"
+                external
+                block
+                class="bg-[#06C755] text-white hover:bg-[#05b34c] comic:text-white"
+              >
                 分享到 LINE
               </UButton>
             </div>
@@ -187,18 +188,16 @@ function memberMenu(member: { id: string, displayName: string }): DropdownMenuIt
         <!-- 成員 -->
         <UCard>
           <template #header>
-            <h2 class="font-medium">
-              成員（{{ members.length }}）
-            </h2>
+            <SectionHeading icon="i-lucide-users" :title="`旅伴（${members.length}）`" tone="coral" />
           </template>
-          <ul class="divide-y divide-default">
-            <li v-for="member in members" :key="member.id" class="flex items-center gap-3 py-2 first:pt-0 last:pb-0">
+          <ul class="divide-y divide-(--ui-border-muted)">
+            <li v-for="member in members" :key="member.id" class="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
               <UAvatar :src="member.avatarUrl ?? undefined" :alt="member.displayName" />
               <span class="min-w-0 flex-1 truncate">
                 {{ member.displayName }}
                 <span v-if="member.id === user?.id" class="text-sm text-muted">（你）</span>
               </span>
-              <UBadge v-if="member.role === 'owner'" variant="subtle" size="sm">
+              <UBadge v-if="member.role === 'owner'" variant="soft" size="sm" icon="i-lucide-crown">
                 擁有者
               </UBadge>
               <UDropdownMenu v-if="isOwner && member.id !== user?.id" :items="memberMenu(member)" :content="{ align: 'end' }">

@@ -27,7 +27,10 @@ useSeoMeta({ title: () => data.value ? `加入「${data.value.trip.name}」` : '
 </script>
 
 <template>
-  <main class="mx-auto flex min-h-screen max-w-md flex-col justify-center p-4">
+  <main class="relative mx-auto flex min-h-screen max-w-md flex-col justify-center p-4">
+    <div class="absolute top-3 right-3">
+      <ThemeSwitcher />
+    </div>
     <UCard v-if="error">
       <div class="space-y-4 text-center">
         <UIcon name="i-lucide-link-2-off" class="size-10 text-muted" />
@@ -43,7 +46,8 @@ useSeoMeta({ title: () => data.value ? `加入「${data.value.trip.name}」` : '
         <p class="text-sm text-muted">
           {{ data.trip.ownerName }} 邀請你加入旅程
         </p>
-        <h1 class="text-2xl font-bold">
+        <AppLogo class="mx-auto h-10" />
+        <h1 class="text-2xl font-bold text-highlighted comic:font-black">
           {{ data.trip.name }}
         </h1>
         <div class="flex justify-center gap-4 text-sm text-muted">
@@ -65,7 +69,7 @@ useSeoMeta({ title: () => data.value ? `加入「${data.value.trip.name}」` : '
           v-else
           block
           size="lg"
-          class="bg-[#06C755] hover:bg-[#05b34c]"
+          class="bg-[#06C755] text-white hover:bg-[#05b34c] comic:text-white"
           @click="login(route.fullPath)"
         >
           使用 LINE 登入後加入

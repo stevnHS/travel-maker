@@ -1,2 +1,115 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
+
+/*
+ * 主題：<html data-theme="cream | comic">（見 app/composables/useTheme.ts）
+ *
+ * 1. 色彩、文字、邊框、圓角：覆寫 Nuxt UI 的 --ui-* 變數。
+ *    Nuxt UI 的預設值寫在 @layer theme，這裡不放進 layer，因此一定會蓋過去。
+ * 2. 元件外觀差異（粗框、硬陰影…）：用下方的 cream: / comic: variant，
+ *    集中寫在 app/app.config.ts。
+ * 3. 主題自訂變數一律以 --tm- 開頭。
+ * 4. Nuxt UI 以 --ui-radius 的倍數重新定義 rounded-*；設為 0.25rem 時
+ *    rounded-lg / 2xl / 3xl 剛好等於 Tailwind 預設的 8 / 16 / 24px，與設計稿一致。
+ */
+
+@custom-variant cream (&:is([data-theme="cream"] *));
+@custom-variant comic (&:is([data-theme="comic"] *));
+
+@theme {
+  --shadow-comic-sm: 2.5px 2.5px 0 var(--tm-ink);
+  --shadow-comic: 4px 4px 0 var(--tm-ink);
+  --shadow-comic-lg: 6px 6px 0 var(--tm-ink);
+  --shadow-cream: 0 2px 10px rgb(251 192 45 / 0.15);
+}
+
+/* ── 奶油黃（設計稿 B）──────────────────────────────── */
+
+:root[data-theme="cream"] {
+  --tm-ink: #4a3f35;
+  --tm-card: #fff;
+  --tm-accent-soft: #fff9c4;
+
+  --ui-primary: #fbc02d;
+  --ui-secondary: #ffb74d;
+  --ui-success: #43a376;
+  --ui-info: #4a9ad6;
+  --ui-warning: #f59e0b;
+  --ui-error: #e5534b;
+
+  --ui-bg: #fffdf0;
+  --ui-bg-muted: #fffaeb;
+  --ui-bg-elevated: #fff6d1;
+  --ui-bg-accented: #ffefb3;
+  --ui-bg-inverted: var(--tm-ink);
+
+  --ui-text-dimmed: #b9aca2;
+  --ui-text-muted: #9a8a7f;
+  --ui-text-toned: #6d5f54;
+  --ui-text: var(--tm-ink);
+  --ui-text-highlighted: #3a3029;
+  --ui-text-inverted: #fff;
+
+  --ui-border: #ffe9a8;
+  --ui-border-muted: #fff2c6;
+  --ui-border-accented: #ffe082;
+  --ui-border-inverted: var(--tm-ink);
+
+  --ui-radius: 0.25rem;
+}
+
+[data-theme="cream"] body {
+  font-family: "Noto Sans TC", "PingFang TC", system-ui, sans-serif;
+}
+
+/* ── 漫畫手繪（設計稿 A）────────────────────────────── */
+
+:root[data-theme="comic"] {
+  --tm-ink: #3e3a39;      /* 墨灰粗線條 */
+  --tm-card: #fff;
+  --tm-washi: #fffcf6;    /* 和紙白 */
+  --tm-coral: #f2a497;    /* 珊瑚粉 */
+  --tm-yamabuki: #f6d27a; /* 山吹黃 */
+  --tm-mizu: #a8d3e6;     /* 水色 */
+  --tm-wakatake: #b9daa5; /* 若竹綠 */
+  --tm-accent-soft: #fdf1d3;
+
+  /* 粉彩底色搭配墨色文字；文字用途的 error 另取較深的珊瑚色才讀得清楚 */
+  --ui-primary: var(--tm-yamabuki);
+  --ui-secondary: var(--tm-coral);
+  --ui-success: var(--tm-wakatake);
+  --ui-info: var(--tm-mizu);
+  --ui-warning: var(--tm-yamabuki);
+  --ui-error: #d9634f;
+
+  --ui-bg: var(--tm-washi);
+  --ui-bg-muted: #fbf5ea;
+  --ui-bg-elevated: #f6eedf;
+  --ui-bg-accented: #ede2cd;
+  --ui-bg-inverted: var(--tm-ink);
+
+  --ui-text-dimmed: #aaa29c;
+  --ui-text-muted: #857c77;
+  --ui-text-toned: #57514f;
+  --ui-text: var(--tm-ink);
+  --ui-text-highlighted: #2b2827;
+  --ui-text-inverted: var(--tm-washi);
+
+  --ui-border: var(--tm-ink);
+  --ui-border-muted: #ddd2c2;
+  --ui-border-accented: var(--tm-ink);
+  --ui-border-inverted: var(--tm-washi);
+
+  --ui-radius: 0.25rem;
+}
+
+/* Zen Maru Gothic 是日文字型，缺字的繁中字改用同為圓體的粉圓（Huninn） */
+[data-theme="comic"] body {
+  font-family: "Zen Maru Gothic", "Huninn", "PingFang TC", system-ui, sans-serif;
+}
+
+/* @nuxt/fonts 只會替字型堆疊的第一個字型產生 @font-face，
+   這條規則讓 Huninn 也被下載，上面的備援才有效 */
+.font-huninn {
+  font-family: "Huninn", sans-serif;
+}

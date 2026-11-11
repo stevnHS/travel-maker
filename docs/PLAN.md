@@ -16,6 +16,21 @@
 未採用：Supabase Auth（避免綁定平台）、Neon Auth（不支援 LINE）、Better Auth（單一 provider 用不到其優勢）。
 身分以 `users` + `user_identities` 分表，日後加 provider 或換驗證方案成本低。
 
+## 主題
+
+兩套視覺主題共用同一套版面，使用者自選，存在 `theme` cookie（伺服器渲染即輸出 `<html data-theme>`，不閃爍）。
+
+| 主題 | 來源設計稿 | 特色 |
+|---|---|---|
+| `cream` 奶油黃（預設） | [NEWARK](https://joyce-0715.github.io/NEWARK/) | 奶油底、白卡片、黃色柔光陰影、Noto Sans TC |
+| `comic` 漫畫手繪 | [our-trip](https://qqqqssss640.github.io/our-trip/) | 和紙底、3px 墨線、硬陰影、粉彩色、Zen Maru Gothic（缺字以粉圓 Huninn 補） |
+
+- 色彩、文字、邊框、圓角：在 `app/assets/css/main.css` 覆寫 Nuxt UI 的 `--ui-*` 變數；主題自訂變數用 `--tm-` 開頭
+- 元件形狀差異（粗框、陰影、圓角）：用 `cream:` / `comic:` custom variant，集中在 `app/app.config.ts`
+- 頁面內的主題差異同樣用 `cream:` / `comic:` 寫在 class 上；插圖等結構差異用 `useTheme()` 判斷
+- 只做淺色，已關閉 Nuxt UI 的 color mode
+- 版面採設計稿 B 的手機優先、單欄（`max-w-xl`）；行程 / 記帳完成後加入底部分頁列
+
 ## 同步策略（非即時）
 
 - 視窗回到前景（`visibilitychange`）、網路恢復時重新抓取，另加短輪詢
