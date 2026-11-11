@@ -1,6 +1,6 @@
 # Travel Maker
 
-旅遊行程共編與共同記帳網站。技術決策與開發計劃見 [docs/PLAN.md](docs/PLAN.md)。
+旅遊行程共編與共同記帳網站。技術決策、設計規則與開發注意事項見 [CLAUDE.md](CLAUDE.md)。
 
 ## 技術堆疊
 
