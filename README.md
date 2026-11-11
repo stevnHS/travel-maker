@@ -34,6 +34,8 @@ pnpm db:migrate
 pnpm dev
 ```
 
+開發時可用 `http://localhost:3000/auth/dev?name=小明` 以假身分登入，換不同 `name` 即可模擬多位旅伴（僅限開發環境）。
+
 ## 常用指令
 
 | 指令 | 說明 |

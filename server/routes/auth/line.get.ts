@@ -1,5 +1,6 @@
 import { and, eq } from 'drizzle-orm'
-import { sendRedirect } from 'nuxt/server'
+import { deleteCookie, getCookie, sendRedirect } from 'nuxt/server'
+import type { RequestEvent } from 'nuxt/server'
 
 interface LineProfile {
   userId: string
@@ -39,10 +40,17 @@ export default defineOAuthLineEventHandler({
       user: { id: userId, displayName: profile.displayName, avatarUrl: profile.pictureUrl ?? null },
       loggedInAt: Date.now(),
     })
-    return sendRedirect(event, '/')
+    return sendRedirect(event, consumeAuthRedirect(event))
   },
   onError(event, error) {
     console.error('LINE OAuth error:', error)
     return sendRedirect(event, '/?error=login_failed')
   },
 })
+
+// 前端在導向登入前寫入 auth_redirect cookie，登入後導回原頁（僅允許站內路徑）
+function consumeAuthRedirect(event: RequestEvent) {
+  const target = getCookie(event, AUTH_REDIRECT_COOKIE)
+  deleteCookie(event, AUTH_REDIRECT_COOKIE)
+  return target && /^\/(?![/\\])/.test(target) ? target : '/'
+}

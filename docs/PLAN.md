@@ -35,6 +35,43 @@
 - 以邀請連結（`trips.invite_token`）加入旅程
 - 角色：`owner`（可管理成員、刪除旅程）、`editor`（可編輯行程與記帳）
 
+| 動作 | owner | editor |
+|---|---|---|
+| 檢視旅程、複製邀請連結 | ✓ | ✓ |
+| 編輯旅程名稱 / 說明 / 日期 | ✓ | ✓ |
+| 重設邀請連結、移除成員、轉移擁有者、刪除旅程 | ✓ | |
+| 退出旅程 | 須先轉移擁有者 | ✓ |
+
+- 每趟旅程恰有一位 owner，`trips.owner_id` 與 `trip_members.role` 同步維護（轉移時以 batch 一併更新）
+- 非成員存取旅程一律回 404，不透露旅程是否存在
+- 邀請預覽（`GET /api/invites/:token`）不需登入，只回傳名稱、日期、擁有者與人數；加入需登入，登入後透過 `auth_redirect` cookie 導回原頁
+- 已有記帳紀錄（付款人或分攤者）的成員不可移除或退出，避免結算資料失去對象
+- 旅程天數上限 60 天（日後依日期區間建立 `trip_days`）
+
+### API
+
+| Method | Path | 說明 |
+|---|---|---|
+| GET | `/api/trips` | 我參與的旅程 |
+| POST | `/api/trips` | 建立旅程（建立者為 owner） |
+| GET | `/api/trips/:id` | 旅程詳情與成員 |
+| PATCH | `/api/trips/:id` | 更新旅程（帶 `version`，衝突回 409 與最新資料） |
+| DELETE | `/api/trips/:id` | 刪除旅程（owner） |
+| POST | `/api/trips/:id/invite-token` | 重設邀請連結（owner） |
+| POST | `/api/trips/:id/transfer` | 轉移擁有者（owner） |
+| DELETE | `/api/trips/:id/members/:userId` | 移除成員（owner）或退出（本人） |
+| GET | `/api/invites/:token` | 邀請預覽 |
+| POST | `/api/invites/:token/join` | 加入旅程（已是成員則直接回傳） |
+
+錯誤訊息放在回應的 `message`（HTTP status text 只能是 ASCII，中文會被 h3 濾掉）。
+
+開發環境另有 `/auth/dev?name=小明&redirect=/path` 假登入（provider = `dev`），用來在本機模擬多位成員；正式建置中只會回 404。
+
+### 待後續里程碑處理
+
+- 修改旅程日期時如何處理已存在的 `trip_days`（行程編輯里程碑一併設計）
+- 「有記帳紀錄不可移除成員」的檢查已實作，待記帳 API 完成後補測
+
 ## 資料模型
 
 ```
@@ -49,7 +86,7 @@ trips ─< expenses ─< expense_splits >─ users
 ## 里程碑
 
 - [x] 專案骨架、schema、LINE 登入
-- [ ] 旅程 CRUD、邀請連結、成員管理
+- [x] 旅程 CRUD、邀請連結、成員管理
 - [ ] 行程編輯（天 / 項目、排序、樂觀鎖、同步機制）
 - [ ] 記帳（新增支出、三種分攤）
 - [ ] 結算（淨額、債務最簡化）
