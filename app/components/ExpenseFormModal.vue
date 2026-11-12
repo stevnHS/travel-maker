@@ -10,11 +10,12 @@ interface Expense {
   title: string
   amount: number
   paidBy: string
-  splitType: SplitType
+  /** 可能是已停用的 shares（按份數），編輯時改以指定金額呈現 */
+  splitType: string
   spentAt: string
   note: string | null
   version: number
-  splits: { userId: string, amount: number, shares: number | null }[]
+  splits: { userId: string, amount: number }[]
 }
 
 const props = defineProps<{
@@ -39,7 +40,6 @@ interface Row {
   userId: string
   included: boolean
   exact: number | undefined
-  shares: number
 }
 
 const state = reactive({
@@ -66,13 +66,13 @@ function load() {
     amount: e?.amount,
     paidBy: e?.paidBy ?? user.value?.id ?? props.members[0]?.id ?? '',
     date: e ? localDate(e.spentAt) : props.defaultDate,
-    splitType: e?.splitType ?? 'equal',
+    // 舊的按份數支出：每人金額已存好，直接帶入指定金額
+    splitType: e?.splitType === 'equal' ? 'equal' : e ? 'exact' : 'equal',
     note: e?.note ?? '',
     rows: props.members.map(m => ({
       userId: m.id,
       included: e ? splitOf.has(m.id) : true,
       exact: splitOf.get(m.id)?.amount,
-      shares: splitOf.get(m.id)?.shares ?? 1,
     })),
   })
   baseVersion.value = e?.version ?? 0
@@ -101,7 +101,7 @@ const payload = computed(() => ({
     .filter(r => r.included)
     .map(r => ({
       userId: r.userId,
-      value: state.splitType === 'exact' ? r.exact ?? 0 : state.splitType === 'shares' ? r.shares : undefined,
+      value: state.splitType === 'exact' ? r.exact ?? 0 : undefined,
     })),
 }))
 
@@ -114,7 +114,6 @@ const fieldError = (field: string) => {
 const preview = computed(() => {
   const p = payload.value
   if (!Number.isInteger(p.amount) || p.amount <= 0 || !p.participants.length) return new Map<string, number>()
-  if (validateSplit(p.amount, p.splitType, p.participants) && p.splitType !== 'exact') return new Map<string, number>()
   return new Map(computeSplits(p.amount, p.splitType, p.paidBy, p.participants).map(s => [s.userId, s.amount]))
 })
 
@@ -223,7 +222,7 @@ async function remove() {
         </UFormField>
 
         <UFormField label="分攤方式" :error="fieldError('participants')">
-          <div class="mb-3 grid grid-cols-3 gap-2">
+          <div class="mb-3 grid grid-cols-2 gap-2">
             <UButton
               v-for="t in SPLIT_TYPES"
               :key="t.value"
@@ -260,14 +259,6 @@ async function remove() {
                 size="sm"
                 class="w-28"
               />
-              <UInputNumber
-                v-else-if="state.splitType === 'shares' && row.included"
-                v-model="row.shares"
-                :min="1"
-                :max="99"
-                size="sm"
-                class="w-28"
-              />
               <span
                 v-if="row.included && state.splitType !== 'exact'"
                 class="w-20 text-right text-sm text-muted tabular-nums"
@@ -287,9 +278,6 @@ async function remove() {
             <template v-else>
               超出 {{ (-exactLeft).toLocaleString() }} 元
             </template>
-          </p>
-          <p v-else-if="state.splitType !== 'exact'" class="mt-2 text-xs text-muted">
-            除不盡的零頭由付款人負擔
           </p>
         </UFormField>
 

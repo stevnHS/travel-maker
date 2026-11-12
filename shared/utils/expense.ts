@@ -3,10 +3,14 @@ import { z } from 'zod'
 export const SPLIT_TYPES = [
   { value: 'equal', label: '均分' },
   { value: 'exact', label: '指定金額' },
-  { value: 'shares', label: '按份數' },
 ] as const
 
 export type SplitType = (typeof SPLIT_TYPES)[number]['value']
+
+/** 資料庫 enum 仍保留已停用的 shares（按份數），舊資料顯示用 */
+export function splitTypeLabel(type: string) {
+  return SPLIT_TYPES.find(t => t.value === type)?.label ?? (type === 'shares' ? '按份數' : type)
+}
 
 export const MAX_AMOUNT = 10_000_000
 
@@ -14,13 +18,13 @@ export const expenseInputSchema = z.object({
   title: z.string().trim().min(1, '請輸入項目').max(100, '最多 100 字'),
   amount: z.number({ error: '請輸入金額' }).int('金額需為整數').min(1, '金額需大於 0').max(MAX_AMOUNT, '金額過大'),
   paidBy: z.uuid({ error: '請選擇付款人' }),
-  splitType: z.enum(['equal', 'exact', 'shares']),
+  splitType: z.enum(['equal', 'exact']),
   spentAt: z.iso.datetime({ offset: true, error: '日期格式錯誤' }),
   note: z.preprocess(
     v => (typeof v === 'string' ? v.trim() || null : v ?? null),
     z.string().max(1000, '最多 1000 字').nullable(),
   ),
-  // equal：value 忽略；exact：value 為應付金額；shares：value 為份數
+  // equal：value 忽略；exact：value 為應付金額
   participants: z.array(z.object({
     userId: z.uuid(),
     value: z.number().int().min(0).max(MAX_AMOUNT).optional(),
@@ -47,7 +51,6 @@ interface Participant {
 export interface Split {
   userId: string
   amount: number
-  shares: number | null
 }
 
 /** 回傳錯誤訊息，沒問題則回傳 null */
@@ -56,33 +59,34 @@ export function validateSplit(amount: number, splitType: SplitType, participants
     const sum = participants.reduce((s, p) => s + (p.value ?? 0), 0)
     if (sum !== amount) return `指定金額合計 ${sum}，與總額 ${amount} 不符`
   }
-  if (splitType === 'shares') {
-    if (participants.some(p => !p.value || p.value < 1)) return '每位分攤者至少 1 份'
-  }
   return null
 }
 
 /**
  * 換算每人應付金額，各列加總必等於 amount。
- * 除不盡的餘數全部給付款人；付款人沒有分攤時給第一位分攤者。
+ * 均分除不盡時，付款人以外的分攤者每人付無條件進位的金額，付款人付剩下的（因此少付）。
+ * 付款人沒有分攤、或金額太小使付款人會變負數時，改為每人取整數、零頭依序各多付 1 元（付款人排最後）。
  */
 export function computeSplits(amount: number, splitType: SplitType, paidBy: string, participants: Participant[]): Split[] {
   if (splitType === 'exact') {
-    return participants.map(p => ({ userId: p.userId, amount: p.value ?? 0, shares: null }))
+    return participants.map(p => ({ userId: p.userId, amount: p.value ?? 0 }))
   }
 
-  const weights = participants.map(p => (splitType === 'shares' ? p.value ?? 1 : 1))
-  const totalWeight = weights.reduce((a, b) => a + b, 0)
-  const splits = participants.map((p, i) => ({
-    userId: p.userId,
-    amount: Math.floor((amount * weights[i]!) / totalWeight),
-    shares: splitType === 'shares' ? weights[i]! : null,
-  }))
+  const n = participants.length
+  const payerIncluded = participants.some(p => p.userId === paidBy)
+  const ceil = Math.ceil(amount / n)
+  const payerShare = amount - ceil * (n - 1)
+  if (payerIncluded && payerShare >= 0) {
+    return participants.map(p => ({ userId: p.userId, amount: p.userId === paidBy ? payerShare : ceil }))
+  }
 
-  const remainder = amount - splits.reduce((s, x) => s + x.amount, 0)
-  if (remainder > 0) {
-    const target = splits.find(s => s.userId === paidBy) ?? splits[0]!
-    target.amount += remainder
+  const base = Math.floor(amount / n)
+  const splits = participants.map(p => ({ userId: p.userId, amount: base }))
+  let remainder = amount - base * n
+  for (const s of splits.filter(s => s.userId !== paidBy)) {
+    if (remainder === 0) break
+    s.amount += 1
+    remainder -= 1
   }
   return splits
 }

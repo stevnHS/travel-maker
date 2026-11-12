@@ -25,6 +25,7 @@ const timestamps = {
 const version = integer().notNull().default(1)
 
 export const tripRole = pgEnum('trip_role', ['owner', 'editor'])
+// shares（按份數）已停用，保留在 enum 供舊資料使用；新增 / 編輯只接受 equal、exact
 export const splitType = pgEnum('split_type', ['equal', 'exact', 'shares'])
 // 行程項目分類，決定卡片的顏色與圖示（見 shared/utils/itinerary.ts）
 export const itemCategory = pgEnum('item_category', ['spot', 'food', 'transport', 'stay', 'shopping', 'other'])
@@ -133,7 +134,7 @@ export const expenseSplits = pgTable('expense_splits', {
   expenseId: uuid().notNull().references(() => expenses.id, { onDelete: 'cascade' }),
   userId: uuid().notNull().references(() => users.id),
   amount: integer().notNull(),
-  // split_type = 'shares' 時記錄份數，其餘為 null
+  // 舊的 split_type = 'shares' 支出記錄份數；新資料一律為 null
   shares: integer(),
 }, t => [
   primaryKey({ columns: [t.expenseId, t.userId] }),

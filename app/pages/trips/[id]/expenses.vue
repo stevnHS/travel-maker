@@ -185,7 +185,7 @@ function openEdit(id: string) {
                 {{ e.title }}
               </p>
               <p class="truncate text-xs text-muted">
-                {{ e.paidBy === user?.id ? '你' : memberName(e.paidBy) }} 付款 · {{ SPLIT_TYPES.find(t => t.value === e.splitType)?.label }} {{ e.splits.length }} 人
+                {{ e.paidBy === user?.id ? '你' : memberName(e.paidBy) }} 付款 · {{ splitTypeLabel(e.splitType) }} {{ e.splits.length }} 人
               </p>
             </div>
             <div class="shrink-0 text-right tabular-nums">
